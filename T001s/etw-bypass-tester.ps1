@@ -1,6 +1,4 @@
-# ETW Bypass Testing Framework
-# Author: Marc Peacock
-# Purpose: Test and validate ETW bypass techniques in controlled environments
+
 
 param(
     [switch]$Setup,
@@ -11,7 +9,6 @@ param(
     [string]$LogPath = "C:\temp\etw-test-results.txt"
 )
 
-# Ensure running as Administrator
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "❌ This script requires Administrator privileges" -ForegroundColor Red
     Write-Host "Please run PowerShell as Administrator and try again" -ForegroundColor Yellow
@@ -30,11 +27,9 @@ function Enable-ETWLogging {
     Write-TestLog "=== Setting up ETW Logging ===" "Cyan"
     
     try {
-        # Create registry structure for PowerShell logging
         $policiesPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows"
         $psPath = "$policiesPath\PowerShell"
         
-        # Create paths if they don't exist
         if (-not (Test-Path $policiesPath)) {
             New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft" -Name "Windows" -Force | Out-Null
         }
@@ -43,7 +38,6 @@ function Enable-ETWLogging {
             New-Item -Path $policiesPath -Name "PowerShell" -Force | Out-Null
         }
         
-        # Script Block Logging
         $scriptBlockPath = "$psPath\ScriptBlockLogging"
         if (-not (Test-Path $scriptBlockPath)) {
             New-Item -Path $psPath -Name "ScriptBlockLogging" -Force | Out-Null
@@ -52,7 +46,6 @@ function Enable-ETWLogging {
         New-ItemProperty -Path $scriptBlockPath -Name "EnableScriptBlockLogging" -Value 1 -PropertyType DWord -Force | Out-Null
         New-ItemProperty -Path $scriptBlockPath -Name "EnableScriptBlockInvocationLogging" -Value 1 -PropertyType DWord -Force | Out-Null
         
-        # Module Logging
         $moduleLogPath = "$psPath\ModuleLogging"
         if (-not (Test-Path $moduleLogPath)) {
             New-Item -Path $psPath -Name "ModuleLogging" -Force | Out-Null
@@ -76,7 +69,6 @@ function Test-ETWConfiguration {
     
     $configOK = $true
     
-    # Check Script Block Logging
     $scriptBlockPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"
     if (Test-Path $scriptBlockPath) {
         $enabled = Get-ItemProperty -Path $scriptBlockPath -Name "EnableScriptBlockLogging" -ErrorAction SilentlyContinue
@@ -91,7 +83,6 @@ function Test-ETWConfiguration {
         $configOK = $false
     }
     
-    # Check Module Logging
     $moduleLogPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging"
     if (Test-Path $moduleLogPath) {
         $enabled = Get-ItemProperty -Path $moduleLogPath -Name "EnableModuleLogging" -ErrorAction SilentlyContinue
@@ -113,7 +104,6 @@ function Test-BaselineLogging {
     Write-TestLog "=== Testing Baseline ETW Functionality ===" "Cyan"
     Write-TestLog "This test verifies ETW is working BEFORE applying any bypass" "Yellow"
     
-    # Clear logs for clean test
     try {
         wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
         Write-TestLog "Cleared existing PowerShell event logs" "Gray"
@@ -123,20 +113,16 @@ function Test-BaselineLogging {
     
     Start-Sleep -Seconds 2
     
-    # Generate unique test activity
     $baselineMarker = "BASELINE-ETW-TEST-$(Get-Random -Minimum 10000 -Maximum 99999)"
     Write-TestLog "Baseline test marker: $baselineMarker" "Yellow"
     
-    # Execute test commands that should be logged
     Write-TestLog "Executing baseline test commands..." "Gray"
     Invoke-Expression "Write-Host 'Baseline test: $baselineMarker'"
     $testVar = "$baselineMarker-variable"
     Get-Process | Select-Object -First 1 | Out-Null
     
-    # Wait for ETW processing
     Start-Sleep -Seconds 3
     
-    # Check if baseline commands were logged
     try {
         $events = Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 20 -ErrorAction Stop
         
@@ -148,7 +134,6 @@ function Test-BaselineLogging {
                 Write-TestLog "Found $($baselineEvents.Count) events containing baseline marker" "Green"
                 Write-TestLog "ETW logging is working properly - ready for bypass testing" "Green"
                 
-                # Show sample of what was logged
                 $sampleEvent = $baselineEvents | Select-Object -First 1
                 Write-TestLog "Sample logged content:" "Yellow"
                 Write-TestLog $sampleEvent.Message.Substring(0, [Math]::Min(200, $sampleEvent.Message.Length)) "White"
@@ -179,7 +164,6 @@ function Test-ETWBypass {
     Write-TestLog "=== Testing ETW Bypass: $BypassName ===" "Cyan"
     Write-TestLog "This test determines if ETW logging has been successfully bypassed" "Yellow"
     
-    # Clear logs for clean test
     try {
         wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
         Write-TestLog "Cleared PowerShell event logs for clean test" "Gray"
@@ -189,28 +173,23 @@ function Test-ETWBypass {
     
     Start-Sleep -Seconds 2
     
-    # Generate unique test marker
     $testMarker = "ETW-BYPASS-TEST-$(Get-Random -Minimum 10000 -Maximum 99999)"
     Write-TestLog "Test marker: $testMarker" "Yellow"
     
-    # Execute test commands that would normally be logged
     Write-TestLog "Executing test commands that should trigger ETW..." "Gray"
     Write-TestLog "Commands being tested:" "Gray"
     Write-TestLog "  - Invoke-Expression with unique marker" "Gray"
     Write-TestLog "  - Variable assignment" "Gray"
     Write-TestLog "  - System command execution" "Gray"
     
-    # Test commands
     Invoke-Expression "Write-Host 'ETW Bypass Test: $testMarker'"
     $testVar = "$testMarker-secretVariable"
     Get-Process | Select-Object -First 1 | Out-Null
     whoami | Out-Null
     
-    # Wait for potential ETW processing
     Write-TestLog "Waiting for ETW processing (3 seconds)..." "Gray"
     Start-Sleep -Seconds 3
     
-    # Analyze results
     Write-TestLog "Analyzing ETW logs for bypass detection..." "Yellow"
     
     try {
@@ -219,7 +198,6 @@ function Test-ETWBypass {
         if ($events) {
             Write-TestLog "Found $($events.Count) total PowerShell events" "Gray"
             
-            # Look for our specific test marker
             $testEvents = $events | Where-Object {$_.Message -like "*$testMarker*"}
             
             if ($testEvents) {
@@ -235,7 +213,7 @@ function Test-ETWBypass {
                 Write-TestLog "CONCLUSION: Commands are still being logged to Windows Event Log" "Red"
                 return $false
             } else {
-                # No test marker found, but other events exist
+
                 Write-TestLog "⚠️ PARTIAL BYPASS" "Yellow"
                 Write-TestLog "Test marker not found, but other PowerShell events were logged" "Yellow"
                 Write-TestLog "This suggests partial ETW interference but not complete bypass" "Yellow"
@@ -263,7 +241,6 @@ function Test-ETWBypass {
         }
     }
     catch {
-        # Cannot access event log
         Write-TestLog "✅ BYPASS SUCCESS" "Green"
         Write-TestLog "ETW bypass appears to be working!" "Green"
         Write-TestLog "Reason: PowerShell event log is inaccessible or empty" "Green"
@@ -296,7 +273,7 @@ function Start-ETWMonitor {
             
             if ($events) {
                 foreach ($event in $events) {
-                    if ($event.Id -eq 4104) {  # Script Block Logging
+                    if ($event.Id -eq 4104) {  
                         $eventCount++
                         Write-TestLog "🔍 ETW EVENT #$eventCount DETECTED" "Red"
                         Write-TestLog "Event ID: $($event.Id) (Script Block Logging)" "Yellow"
@@ -306,11 +283,10 @@ function Start-ETWMonitor {
                         Write-TestLog "=" * 60 "Gray"
                     }
                 }
-                # Clear events after displaying to avoid duplicates
                 wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
             }
         } catch {
-            # Ignore errors, continue monitoring
+
         }
         
         Start-Sleep -Seconds 1
@@ -363,7 +339,6 @@ function Show-BypassExplanation {
     Write-TestLog "" "White"
 }
 
-# Main execution logic
 Write-TestLog "ETW Bypass Testing Framework Started" "Cyan"
 Write-TestLog "Log file: $LogPath" "Gray"
 Write-TestLog "" "White"
